@@ -2,7 +2,7 @@
 title: .NET Aspire MongoDB database component
 description: This article describes the .NET Aspire MongoDB database component.
 ms.topic: how-to
-ms.date: 01/22/2024
+ms.date: 06/05/2024
 ---
 
 # .NET Aspire MongoDB database component
@@ -24,7 +24,7 @@ To get started with the .NET Aspire MongoDB database component, install the [Asp
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.MongoDB.Driver --prerelease
+dotnet add package Aspire.MongoDB.Driver
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -40,10 +40,10 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the `AddMongoDBClient` extension to register a `IMongoClient` for use via the dependency injection container.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the `AddMongoDBClient` extension to register a `IMongoClient` for use via the dependency injection container.
 
 ```csharp
-builder.AddMongoDBClient("IMongoClient");
+builder.AddMongoDBClient("mongodb");
 ```
 
 To retrieve your `IMongoClient` object, consider the following example service:
@@ -59,20 +59,33 @@ After adding a `IMongoClient`, you can require the `IMongoClient` instance using
 
 ## App host usage
 
-In your app host project, register a MongoDB database and consume the connection using the following methods:
+To model the MongoDB resource in the app host, install the [Aspire.Hosting.MongoDB](https://www.nuget.org/packages/Aspire.Hosting.MongoDB) NuGet package.
+
+### [.NET CLI](#tab/dotnet-cli)
+
+```dotnetcli
+dotnet add package Aspire.Hosting.MongoDB
+```
+
+### [PackageReference](#tab/package-reference)
+
+```xml
+<PackageReference Include="Aspire.Hosting.MongoDB"
+                  Version="[SelectVersion]" />
+```
+
+---
+
+In your app host project, register the MongoDB database and consume the connection method and consume the service using the following methods:
 
 ```csharp
-var mongodb = builder.AddMongoDB("mongodb")
-                     .AddDatabase("database");
+var builder = DistributedApplication.CreateBuilder(args);
+
+var mongo = builder.AddMongoDB("mongo");
+var mongodb = mongo.AddDatabase("mongodb");
 
 var myService = builder.AddProject<Projects.MyService>()
                        .WithReference(mongodb);
-```
-
-The `WithReference` method configures a connection in the `MyService` project named `mongodb`. In the _Program.cs_ file of `MyService`, the database connection can be consumed using:
-
-```csharp
-builder.AddMongoDBClient("mongodb");
 ```
 
 ## Configuration
@@ -101,9 +114,9 @@ For more information on how to format this connection string, see [MongoDB: Conn
 
 ### Use configuration providers
 
-The .NET Aspire MongoDB database component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the `MySqlConnectorSettings` from configuration files such as _appsettings.json_ by using the `Aspire:MongoDB:Driver` key. If you have set up your configurations in the `Aspire:MongoDB:Driver` section, you can just call the method without passing any parameter.
+The .NET Aspire MongoDB database component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the `MySqlConnectorSettings` from configuration files such as _:::no-loc text="appsettings.json":::_ by using the `Aspire:MongoDB:Driver` key. If you have set up your configurations in the `Aspire:MongoDB:Driver` section, you can just call the method without passing any parameter.
 
-The following example shows an _appsettings.json_ file that configures some of the available options:
+The following example shows an _:::no-loc text="appsettings.json":::_ file that configures some of the available options:
 
 ```json
 {
@@ -111,9 +124,9 @@ The following example shows an _appsettings.json_ file that configures some of t
     "MongoDB": {
       "Driver": {
         "ConnectionString": "mongodb://server:port/test",
-        "HealthChecks": true,
+        "DisableHealthChecks": false,
         "HealthCheckTimeout": 10000,
-        "Tracing": true
+        "DisableTracing": false
       },
     }
   }
@@ -133,12 +146,12 @@ builder.AddMongoDBClient("mongodb",
 
 Here are the configurable options with corresponding default values:
 
-| Name                 | Description                                                                         |
-|----------------------|-------------------------------------------------------------------------------------|
-| `ConnectionString`   | The connection string of the MongoDB database database to connect to.               |
-| `HealthChecks`       | A boolean value that indicates whether the database health check is enabled or not. |
-| `HealthCheckTimeout` | An `int?` value that indicates the MongoDB health check timeout in milliseconds.    |
-| `Tracing`            | A boolean value that indicates whether the OpenTelemetry tracing is enabled or not. |
+| Name                  | Description                                                                           |
+|-----------------------|---------------------------------------------------------------------------------------|
+| `ConnectionString`    | The connection string of the MongoDB database database to connect to.                 |
+| `DisableHealthChecks` | A boolean value that indicates whether the database health check is disabled or not.  |
+| `HealthCheckTimeout`  | An `int?` value that indicates the MongoDB health check timeout in milliseconds.      |
+| `DisableTracing`      | A boolean value that indicates whether the OpenTelemetry tracing is disabled or not.  |
 
 [!INCLUDE [component-health-checks](../includes/component-health-checks.md)]
 

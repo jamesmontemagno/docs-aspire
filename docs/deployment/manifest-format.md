@@ -1,7 +1,7 @@
 ---
 title: .NET Aspire manifest format for deployment tool builders
 description: Learn about the .NET Aspire manifest format in this comprehensive deployment tool builder guide.
-ms.date: 03/13/2024
+ms.date: 03/29/2024
 ms.topic: reference
 ---
 
@@ -43,6 +43,23 @@ info: Aspire.Hosting.Publishing.ManifestPublisher[0]
 ```
 
 The file generated is the .NET Aspire manifest and is used by tools to support deploying into target cloud environments.
+
+> [!NOTE]
+> You can also generate a manifest as part of the launch profile. Consider the following _launchSettings.json_:
+>
+> ```json
+> {
+>   "$schema": "http://json.schemastore.org/launchsettings.json",
+>   "profiles": {
+>     "generate-manifest": {
+>       "commandName": "Project",
+>       "launchBrowser": false,
+>       "dotnetRunMessages": true,
+>       "commandLineArgs": "--publisher manifest --output-path aspire-manifest.json"
+>     }
+>   }
+> }
+> ```
 
 ## Basic manifest format
 
@@ -111,7 +128,7 @@ Publishing the manifest from the default starter template for .NET Aspire produc
 }
 ```
 
-The manifest format JSON consists of a single object called `resources`, which contains a property for each resource specified in _Program.cs_ (the `name` argument for each name is used as the property for each of the child resource objects in JSON).
+The manifest format JSON consists of a single object called `resources`, which contains a property for each resource specified in _:::no-loc text="Program.cs":::_ (the `name` argument for each name is used as the property for each of the child resource objects in JSON).
 
 ### Connection string and binding references
 
@@ -128,7 +145,7 @@ This dependency is known because the environment variables for the _webfrontend_
 },
 ```
 
-The `apiservice` resource is referenced by `webfrontend` using the call `WithReference(apiservice)` in the app host _Program.cs_ file and `redis` is referenced using the call `WithReference(cache)`:
+The `apiservice` resource is referenced by `webfrontend` using the call `WithReference(apiservice)` in the app host _:::no-loc text="Program.cs":::_ file and `redis` is referenced using the call `WithReference(cache)`:
 
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);

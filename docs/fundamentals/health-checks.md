@@ -1,7 +1,7 @@
 ---
 title: .NET Aspire health checks
 description: Explore .NET Aspire health checks
-ms.date: 12/08/2023
+ms.date: 06/03/2024
 ms.topic: quickstart
 ---
 
@@ -15,7 +15,7 @@ Health checks provide availability and state information about an app. Health ch
 
 ## .NET Aspire health check endpoints
 
-.NET Aspire exposes two default health check HTTP endpoints when the `AddServiceDefaults` and `MapDefaultEndpoints` methods are called from the _Program.cs_ file:
+.NET Aspire exposes two default health check HTTP endpoints in **Development** environments when the `AddServiceDefaults` and `MapDefaultEndpoints` methods are called from the _:::no-loc text="Program.cs":::_ file:
 
 - The `/health` endpoint indicates if the app is running normally where it's ready to receive requests. All health checks must pass for app to be considered ready to accept traffic after starting.
 
@@ -33,7 +33,50 @@ Health checks provide availability and state information about an app. Health ch
 
     The `/alive` endpoint returns an HTTP status code 200 and a `text/plain` value of <xref:Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy> when the app is _alive_.
 
-The `AddServiceDefaults` and `MapDefaultEndpoints` methods also apply various configurations to your app beyond just health checks, such as OpenTelemetry and service discovery configurations.
+The `AddServiceDefaults` and `MapDefaultEndpoints` methods also apply various configurations to your app beyond just health checks, such as [OpenTelemetry](telemetry.md) and [service discovery](../service-discovery/overview.md) configurations.
+
+### Non-development environments
+
+In non-development environments, the `/health` and `/alive` endpoints are disabled by default. If you need to enable them, its recommended to protect these endpoints with various routing features, such as host filtering and/or authorization. For more information, see [Health checks in ASP.NET Core](/aspnet/core/host-and-deploy/health-checks#use-health-checks-routing).
+
+Additionally, it may be advantageous to configure request timeouts and output caching for these endpoints to prevent abuse or denial-of-service attacks. To do so, consider the following modified `AddDefaultHealthChecks` method:
+
+:::code language="csharp" source="snippets/healthz/Healthz.ServiceDefaults/Extensions.cs" id="healthchecks":::
+
+The preceding code:
+
+- Adds a timeout of 5 seconds to the health check requests with a policy named `HealthChecks`.
+- Adds a 10-second cache to the health check responses with a policy named `HealthChecks`.
+
+Now consider the updated `MapDefaultEndpoints` method:
+
+:::code language="csharp" source="snippets/healthz/Healthz.ServiceDefaults/Extensions.cs" id="mapendpoints":::
+
+The preceding code:
+
+- Groups the health check endpoints under the `/` path.
+- Caches the output and specifies a request time with the corresponding `HealthChecks` policy.
+
+In addition to the updated `AddDefaultHealthChecks` and `MapDefaultEndpoints` methods, you must also add the corresponding services for both request timeouts and output caching.
+
+In the appropriate consuming app's entry point (usually the _:::no-loc text="Program.cs":::_ file), add the following code:
+
+```csharp
+// Wherever your services are being registered.
+// Before the call to Build().
+builder.Services.AddRequestTimeouts();
+builder.Services.AddOutputCache();
+
+var app = builder.Build();
+
+// Wherever your app has been built, before the call to Run().
+app.UseRequestTimeouts();
+app.UseOutputCache();
+
+app.Run();
+```
+
+For more information, see [Request timeouts middleware in ASP.NET Core](/aspnet/core/performance/timeouts) and [Output caching middleware in ASP.NET Core](/aspnet/core/performance/caching/output).
 
 ## Component health checks
 
@@ -46,13 +89,13 @@ If either of these operations fail, the corresponding health check also fails.
 
 ### Configure health checks
 
-You can disable health checks for a given component using one of the available configuration options. .NET Aspire components support [Microsoft.Extensions.Configurations](/dotnet/api/microsoft.extensions.configuration) to apply settings through config files such as `appsettings.json`:
+You can disable health checks for a given component using one of the available configuration options. .NET Aspire components support [Microsoft.Extensions.Configurations](/dotnet/api/microsoft.extensions.configuration) to apply settings through config files such as _:::no-loc text="appsettings.json":::_:
 
 ```json
 {
   "Aspire": {
     "Npgsql": {
-      "HealthChecks": false,
+      "DisableHealthChecks": true,
     }
   }
 }
@@ -63,7 +106,7 @@ You can also use an inline delegate to configure health checks:
 ```csharp
 builder.AddNpgsqlDbContext<MyDbContext>(
     "postgresdb",
-    static settings => settings.HealthChecks = false);
+    static settings => settings.DisableHealthChecks  = true);
 ```
 
 ## See also

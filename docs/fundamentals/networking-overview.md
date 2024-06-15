@@ -1,7 +1,7 @@
 ---
 title: .NET Aspire inner loop networking overview
 description: Learn how .NET Aspire handles networking and service bindings, and how you can use them in your app code.
-ms.date: 03/07/2024
+ms.date: 04/24/2024
 ms.topic: overview
 ---
 
@@ -33,7 +33,7 @@ To help visualize how service bindings work, consider the .NET Aspire starter te
 
 When you call <xref:Aspire.Hosting.ProjectResourceBuilderExtensions.AddProject%2A>, the app host looks for _Properties/launchSettings.json_ to determine the default set of service bindings. The app host selects a specific launch profile using the following rules:
 
-1. An explicit <xref:Aspire.Hosting.ProjectResourceBuilderExtensions.WithLaunchProfile%2A> call on the `IResourceBuilder<ProjectResource>`.
+1. An explicit `launchProfileName` argument passed when calling `AddProject`.
 1. The `DOTNET_LAUNCH_PROFILE` environment variable. For more information, see [.NET environment variables](/dotnet/core/tools/dotnet-environment-variables).
 1. The first launch profile defined in _launchSettings.json_.
 
@@ -47,16 +47,14 @@ For the remainder of this article, imagine that you've created an <xref:Aspire.H
 var builder = DistributedApplication.CreateBuilder(args);
 ```
 
-To specify that the **https** launch profile should be used, call <xref:Aspire.Hosting.ProjectResourceBuilderExtensions.WithLaunchProfile%2A>:
-
-:::code source="snippets/networking/Networking.AppHost/Program.WithLaunchProfile.cs" id="withlaunchprofile":::
-
-This will select the **https** launch profile from _launchSettings.json_. The `applicationUrl` of that launch profile is used to create a service binding for this project. This is the equivalent of:
+To specify the **http** and **https** launch profiles, configure the `applicationUrl` values for both in the _launchSettings.json_ file. These URLs are used to create service bindings for this project. This is the equivalent of:
 
 :::code source="snippets/networking/Networking.AppHost/Program.WithLaunchProfile.cs" id="verbose":::
 
 > [!IMPORTANT]
 > If there's no _launchSettings.json_ (or launch profile), there are no bindings by default.
+
+For more information, see [.NET Aspire and launch profiles](launch-profiles.md).
 
 ## Ports and proxies
 
@@ -137,7 +135,7 @@ When you add a container resource, .NET Aspire automatically assigns a random po
 The preceding code:
 
 - Creates a container resource named `frontend`, from the `mcr.microsoft.com/dotnet/samples:aspnetapp` image.
-- Binds the host to port 8000 and the container port to 8080 with the `http` scheme.
+- Exposes an `http` endpoint by binding the host to port 8000 and mapping it to the container's port 8080.
 
 Consider the following diagram:
 
@@ -153,7 +151,7 @@ There's also an overload that allows you to specify a delegate to configure the 
 
 The preceding code provides a callback delegate to configure the endpoint. The endpoint is named `admin` and configured to use the `http` scheme and transport, as well as the 17003 host port. The consumer references this endpoint by name, consider the following `AddHttpClient` call:
 
-```
+```csharp
 builder.Services.AddHttpClient<WeatherApiClient>(
     client => client.BaseAddress = new Uri("http://_admin.apiservice"));
 ```

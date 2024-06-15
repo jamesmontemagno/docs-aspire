@@ -1,7 +1,7 @@
 ---
 title: .NET Aspire PostgreSQL component
 description: This article describes the .NET Aspire PostgreSQL component.
-ms.date: 01/22/2024
+ms.date: 06/05/2024
 ms.topic: how-to
 ---
 
@@ -16,7 +16,7 @@ To get started with the .NET Aspire PostgreSQL component, install the [Aspire.Np
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.Npgsql --prerelease
+dotnet add package Aspire.Npgsql
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -31,10 +31,10 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspirePostgreSqlNpgsqlExtensions.AddNpgsqlDataSource%2A> extension to register an `NpgsqlDataSource` for use via the dependency injection container.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspirePostgreSqlNpgsqlExtensions.AddNpgsqlDataSource%2A> extension to register an `NpgsqlDataSource` for use via the dependency injection container.
 
 ```csharp
-builder.AddNpgsqlDataSource("db");
+builder.AddNpgsqlDataSource("postgresdb");
 ```
 
 After adding `NpgsqlDataSource` to the builder, you can get the `NpgsqlDataSource` instance using dependency injection. For example, to retrieve your context object from service:
@@ -48,21 +48,21 @@ public class ExampleService(NpgsqlDataSource dataSource)
 
 ## App host usage
 
-In your app host project, register and consume the PostgreSQL component using the following methods, such as <xref:Aspire.Hosting.PostgresBuilderExtensions.AddPostgres%2A>:
+[!INCLUDE [postgresql-app-host](includes/postgresql-app-host.md)]
 
 ```csharp
-var postgresdb = builder.AddPostgres("pg")
-                        .AddDatabase("postgresdb");
+var builder = DistributedApplication.CreateBuilder(args);
+
+var postgres = builder.AddPostgres("postgres");
+var postgresdb = postgres.AddDatabase("postgresdb");
 
 var exampleProject = builder.AddProject<Projects.ExampleProject>()
                             .WithReference(postgresdb);
 ```
 
-The <xref:Aspire.Hosting.ResourceBuilderExtensions.WithReference%2A> method configures a connection in the `ExampleProject` named `postgresdb`. In the _Program.cs_ file of the `ExampleService` project, the database connection can be consumed using:
+[!INCLUDE [postgresql-explicit-username-password](includes/postgresql-explicit-username-password.md)]
 
-```csharp
-builder.AddNpgsqlDataSource("postgresdb");
-```
+[!INCLUDE [postgresql-flexible-server](includes/postgresql-flexible-server.md)]
 
 ## Configuration
 
@@ -81,23 +81,23 @@ And then the connection string will be retrieved from the `ConnectionStrings` co
 ```json
 {
   "ConnectionStrings": {
-    "NpgsqlConnection": "Host=myserver;Database=test"
+    "NpgsqlConnection": "Host=myserver;Database=postgresdb"
   }
 }
 ```
 
 ### Use configuration providers
 
-The .NET Aspire PostgreSQL component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the <xref:Aspire.Npgsql.NpgsqlSettings> from _appsettings.json_ or other configuration files by using the `Aspire:Npgsql` key. Example `appsettings.json` that configures some of the options:
+The .NET Aspire PostgreSQL component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the <xref:Aspire.Npgsql.NpgsqlSettings> from _:::no-loc text="appsettings.json":::_ or other configuration files by using the `Aspire:Npgsql` key. Example _:::no-loc text="appsettings.json":::_ that configures some of the options:
 
-The following example shows an _appsettings.json_ file that configures some of the available options:
+The following example shows an _:::no-loc text="appsettings.json":::_ file that configures some of the available options:
 
 ```json
 {
   "Aspire": {
     "Npgsql": {
-      "HealthChecks": false,
-      "Tracing": false
+      "DisableHealthChecks": true,
+      "DisableTracing": true
     }
   }
 }
@@ -105,12 +105,12 @@ The following example shows an _appsettings.json_ file that configures some of t
 
 ### Use inline delegates
 
-You can also pass the `Action<NpgsqlSettings> configureSettings` delegate to set up some or all the options inline, for example to set the `ConnectionString`:
+You can also pass the `Action<NpgsqlSettings> configureSettings` delegate to set up some or all the options inline, for example to disable health checks:
 
 ```csharp
 builder.AddNpgsqlDataSource(
     "postgresdb",
-     settings => settings.HealthChecks = false);
+     settings => settings.DisableHealthChecks  = true);
 ```
 
 [!INCLUDE [component-health-checks](../includes/component-health-checks.md)]

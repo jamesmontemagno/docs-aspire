@@ -1,11 +1,11 @@
 ---
-title: NET Aspire Azure AI Search Documents component
-description: Learn how to use the NET Aspire Azure AI Search Documents component.
+title: .NET Aspire Azure AI Search Documents component
+description: Learn how to use the .NET Aspire Azure AI Search Documents component.
 ms.topic: how-to
-ms.date: 03/11/2024
+ms.date: 06/12/2024
 ---
 
-# NET Aspire Azure AI Search Documents component
+# .NET Aspire Azure AI Search Documents component
 
 In this article, you learn how to use the .NET Aspire Azure AI Search Documents client. The `Aspire.Azure.Search.Documents` library is used to register an <xref:Azure.Search.Documents.Indexes.SearchIndexClient> in the dependency injection (DI) container for connecting to Azure Search. It enables corresponding health checks and logging.
 
@@ -14,14 +14,14 @@ For more information on using the `SearchIndexClient`, see [How to use Azure.Sea
 ## Get started
 
 - Azure subscription: [create one for free](https://azure.microsoft.com/free/).
-- Azure Search service: [create an Azure OpenAI Service resource](/azure/search/search-create-service-portal).
+- Azure Search service: [create an Azure AI Search service resource](/azure/search/search-create-service-portal).
 
-To get started with the NET Aspire Azure AI Search Documents component, install the [Aspire.Azure.Search.Documents](https://www.nuget.org/packages/Aspire.Azure.Search.Documents) NuGet package.
+To get started with the .NET Aspire Azure AI Search Documents component, install the [Aspire.Azure.Search.Documents](https://www.nuget.org/packages/Aspire.Azure.Search.Documents) NuGet package.
 
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.Azure.Search.Documents --prerelease
+dotnet add package Aspire.Azure.Search.Documents
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -37,10 +37,10 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the extension method to register an `SearchIndexClient` for use via the dependency injection container. The method takes a connection name parameter.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the extension method to register an `SearchIndexClient` for use via the dependency injection container. The <xref:Microsoft.Extensions.Hosting.AspireAzureSearchExtensions.AddAzureSearchClient%2A> method takes a connection name parameter.
 
 ```csharp
-builder.AddAzureSearch("searchConnectionName");
+builder.AddAzureSearchClient("searchConnectionName");
 ```
 
 You can then retrieve the `SearchIndexClient` instance using dependency injection. For example, to retrieve the client from an example service:
@@ -71,15 +71,32 @@ public class ExampleService(SearchIndexClient indexClient)
 }
 ```
 
-For more information, see the [Azure AI Search client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/search.documents-readme?view=azure-dotnet&preserve-view=true) for examples on using the `SearchIndexClient`.
+For more information, see the [Azure AI Search client library for .NET](/dotnet/api/overview/azure/search.documents-readme?view=azure-dotnet&preserve-view=true) for examples on using the `SearchIndexClient`.
 
 ## App host usage
 
-[!INCLUDE [azure-component-nuget](../includes/azure-component-nuget.md)]
+To add Azure AI hosting support to your <xref:Aspire.Hosting.IDistributedApplicationBuilder>, install the [Aspire.Hosting.Azure.CognitiveServices](https://www.nuget.org/packages/Aspire.Hosting.Azure.CognitiveServices) NuGet package.
 
-In the _Program.cs_ file of `AppHost`, add an Azure Search service and consume the connection using the following methods:
+### [.NET CLI](#tab/dotnet-cli)
+
+```dotnetcli
+dotnet add package Aspire.Hosting.Azure.CognitiveServices
+```
+
+### [PackageReference](#tab/package-reference)
+
+```xml
+<PackageReference Include="Aspire.Hosting.Azure.CognitiveServices"
+                  Version="[SelectVersion]" />
+```
+
+---
+
+In the _:::no-loc text="Program.cs":::_ file of `AppHost`, add an Azure Search service and consume the connection using the following methods:
 
 ```csharp
+var builder = DistributedApplication.CreateBuilder(args);
+
 var search = builder.ExecutionContext.IsPublishMode
     ? builder.AddAzureSearch("search")
     : builder.AddConnectionString("search");
@@ -88,7 +105,7 @@ var myService = builder.AddProject<Projects.MyService>()
                        .WithReference(search);
 ```
 
-The `AddAzureSearch` method will read connection information from the AppHost's configuration (for example, from "user secrets") under the `ConnectionStrings:search` config key. The `WithReference` method passes that connection information into a connection string named `search` in the `MyService` project. In the _Program.cs_ file of `MyService`, the connection can be consumed using:
+The <xref:Aspire.Hosting.AzureSearchExtensions.AddAzureSearch%2A> method will read connection information from the AppHost's configuration (for example, from "user secrets") under the `ConnectionStrings:search` config key. The `WithReference` method passes that connection information into a connection string named `search` in the `MyService` project. In the _:::no-loc text="Program.cs":::_ file of `MyService`, the connection can be consumed using:
 
 ```csharp
 builder.AddAzureSearch("search");
@@ -134,7 +151,7 @@ Alternatively, a custom connection string can be used.
 
 ### Use configuration providers
 
-The .NET Aspire Azure AI Search library supports [Microsoft.Extensions.Configuration](xref:Microsoft.Extensions.Configuration). It loads the `AzureSearchSettings` and `SearchClientOptions` from configuration by using the `Aspire:Azure:Search:Documents` key. Example `appsettings.json` that configures some of the options:
+The .NET Aspire Azure AI Search library supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the `AzureSearchSettings` and `SearchClientOptions` from configuration by using the `Aspire:Azure:Search:Documents` key. Example _:::no-loc text="appsettings.json":::_ that configures some of the options:
 
 ```json
 {
@@ -142,7 +159,7 @@ The .NET Aspire Azure AI Search library supports [Microsoft.Extensions.Configura
     "Azure": {
       "Search": {
         "Documents": {
-          "Tracing": true,
+          "DisableTracing": false,
         }
       }
     }
@@ -157,7 +174,7 @@ You can also pass the `Action<AzureSearchSettings> configureSettings` delegate t
 ```csharp
 builder.AddAzureSearch(
     "searchConnectionName",
-    static settings => settings.Tracing = false);
+    static settings => settings.DisableTracing = true);
 ```
 
 You can also setup the <xref:Azure.Search.Documents.SearchClientOptions> using the optional `Action<IAzureClientBuilder<SearchIndexClient, SearchClientOptions>> configureClientBuilder` parameter of the `AddAzureSearch` method. For example, to set the client ID for this client:
@@ -177,7 +194,7 @@ The .NET Aspire Azure AI Search Documents component implements a single health c
 
 ### Logging
 
-The NET Aspire Azure AI Search Documents component uses the following log categories:
+The .NET Aspire Azure AI Search Documents component uses the following log categories:
 
 - `Azure`
 - `Azure.Core`

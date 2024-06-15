@@ -2,7 +2,7 @@
 title: .NET Aspire Microsoft Entity Framework Core Cosmos DB component
 description: This article describes the .NET Aspire Microsoft Entity Framework Core Cosmos DB component features and capabilities.
 ms.topic: how-to
-ms.date: 01/22/2024
+ms.date: 06/05/2024
 ---
 
 # .NET Aspire Microsoft Entity Framework Core Cosmos DB component
@@ -16,7 +16,7 @@ To get started with the .NET Aspire Microsoft Entity Framework Core Cosmos DB co
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.Microsoft.EntityFrameworkCore.Cosmos --prerelease
+dotnet add package Aspire.Microsoft.EntityFrameworkCore.Cosmos
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -32,7 +32,7 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireAzureEFCoreCosmosDBExtensions.AddCosmosDbContext%2A> extension to register a <xref:System.Data.Entity.DbContext?displayProperty=fullName> for use via the dependency injection container.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireAzureEFCoreCosmosExtensions.AddCosmosDbContext%2A> extension to register a <xref:System.Data.Entity.DbContext?displayProperty=fullName> for use via the dependency injection container.
 
 ```csharp
 builder.AddCosmosDbContext<MyDbContext>("cosmosdb");
@@ -51,25 +51,41 @@ For more information on using Entity Framework Core with Azure Cosmos DB, see th
 
 ## App host usage
 
-[!INCLUDE [azure-component-nuget](../includes/azure-component-nuget.md)]
+To add Azure Cosmos DB hosting support to your <xref:Aspire.Hosting.IDistributedApplicationBuilder>, install the [Aspire.Hosting.Azure.CosmosDB](https://www.nuget.org/packages/Aspire.Hosting.Azure.CosmosDB) NuGet package.
+
+### [.NET CLI](#tab/dotnet-cli)
+
+```dotnetcli
+dotnet add package Aspire.Hosting.Azure.CosmosDB
+```
+
+### [PackageReference](#tab/package-reference)
+
+```xml
+<PackageReference Include="Aspire.Hosting.Azure.CosmosDB"
+                  Version="[SelectVersion]" />
+```
+
+---
 
 In your app host project, register the .NET Aspire Microsoft Entity Framework Core Cosmos DB component and consume the service using the following methods:
 
 ```csharp
-// Service registration
-var cosmosdbService = builder.AddAzureCosmosDB("cdb")
-                             .AddDatabase("cosmosdb");
+var builder = DistributedApplication.CreateBuilder(args);
 
-// Service consumption
+var cosmos = builder.AddAzureCosmosDB("cosmos");
+var cosmosdb = cosmos.AddDatabase("cosmosdb");
+
 var exampleProject = builder.AddProject<Projects.ExampleProject>()
-                            .WithReference(cosmosdbService);
+                            .WithReference(cosmosdb);
 ```
 
-The <xref:Microsoft.Extensions.Hosting.AspireAzureCosmosDBExtensions.AddAzureCosmosDB%2A> method will read connection information from the AppHost's configuration under the `ConnectionStrings:cosmosdb` config key. The <xref:Aspire.Hosting.ResourceBuilderExtensions.WithReference%2A> method passes that connection information into a connection string named `cosmosdb` in the `ExampleProject` project. In the _Program.cs_ file of `cosmosdbService`, the connection can be consumed using:
-
-```csharp
-builder.AddAzureCosmosDB("cosmosdb");
-```
+> [!TIP]
+> To use the Azure Cosmos DB emulator, chain a call to the <xref:Aspire.Hosting.AzureCosmosExtensions.AddAzureCosmosDB%2A> method.
+>
+> ```csharp
+> cosmosdb.RunAsEmulator();
+> ```
 
 ## Configuration
 
@@ -97,7 +113,7 @@ For more information, see the [ConnectionString documentation](/azure/cosmos-db/
 
 ### Use configuration providers
 
-The .NET Aspire Microsoft Entity Framework Core Cosmos DB component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the <xref:Aspire.Microsoft.Azure.Cosmos.AzureCosmosDBSettings> from _appsettings.json_ or other configuration files using `Aspire:Microsoft:EntityFrameworkCore:Cosmos` key. Example `appsettings.json` that configures some of the options:
+The .NET Aspire Microsoft Entity Framework Core Cosmos DB component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the <xref:Aspire.Microsoft.EntityFrameworkCore.Cosmos.EntityFrameworkCoreCosmosSettings > from _:::no-loc text="appsettings.json":::_ or other configuration files using `Aspire:Microsoft:EntityFrameworkCore:Cosmos` key. Example _:::no-loc text="appsettings.json":::_ that configures some of the options:
 
 ```json
 {
@@ -105,8 +121,7 @@ The .NET Aspire Microsoft Entity Framework Core Cosmos DB component supports <xr
     "Microsoft": {
       "EntityFrameworkCore": {
         "Cosmos": {
-          "DbContextPooling": true,
-          "Tracing": false
+          "DisableTracing": true
         }
       }
     }
@@ -116,12 +131,12 @@ The .NET Aspire Microsoft Entity Framework Core Cosmos DB component supports <xr
 
 ### Use inline delegates
 
-You can also pass the `Action<EntityFrameworkCoreCosmosDBSettings> configureSettings` delegate to set up some or all the <xref:Aspire.Microsoft.EntityFrameworkCore.Cosmos.EntityFrameworkCoreCosmosDBSettings> options inline, for example to disable tracing from code:
+You can also pass the `Action<EntityFrameworkCoreCosmosSettings> configureSettings` delegate to set up some or all the <xref:Aspire.Microsoft.EntityFrameworkCore.Cosmos.EntityFrameworkCoreCosmosSettings> options inline, for example to disable tracing from code:
 
 ```csharp
 builder.AddCosmosDbContext<MyDbContext>(
     "cosmosdb",
-    settings => settings.Tracing = false);
+    settings => settings.DisableTracing = true);
 ```
 
 [!INCLUDE [component-health-checks](../includes/component-health-checks.md)]

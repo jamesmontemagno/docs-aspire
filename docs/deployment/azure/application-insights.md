@@ -1,7 +1,7 @@
 ---
 title: Use .NET Aspire with Application Insights
 description: Learn how to send .NET Aspire telemetry to Application Insights.
-ms.date: 11/11/2023
+ms.date: 04/12/2024
 ms.topic: how-to
 ---
 
@@ -21,11 +21,11 @@ With this option, an instance of Application Insights will be created for you wh
 
 To use automatic provisioning, you specify a dependency in the app host project, and reference it in each project/resource that needs to send telemetry to Application Insights. The steps include:
 
-- Add a Nuget package reference to `Aspire.Hosting.Azure` in the app host project.
+- Add a Nuget package reference to [Aspire.Hosting.Azure.ApplicationInsights](https://nuget.org/packages/Aspire.Hosting.Azure.ApplicationInsights) in the app host project.
 
 - Update the app host code to use the Application Insights resource, and reference it from each project:
 
-``` csharp
+```csharp
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Automatically provision an Application Insights resource
@@ -48,14 +48,16 @@ Follow the steps in [Deploy a .NET Aspire app to Azure Container Apps using the 
 
 Application Insights uses a connection string to tell the OpenTelemetry exporter where to send the telemetry data. The connection string is specific to the instance of Application Insights you want to send the telemetry to. It can be found in the Overview page for the application insights instance.
 
-:::image type="content" source="../media/app-insights-connection-string.png" lightbox="../media/app-insights-connection-string.png" alt-text="Connection string placement in the Azure Application Insights portal UI.":::
+:::image type="content" loc-scope="azure" source="../media/app-insights-connection-string.png" lightbox="../media/app-insights-connection-string.png" alt-text="Connection string placement in the Azure Application Insights portal UI.":::
 
 If you wish to use an instance of Application Insights that you have provisioned manually, then you should use the `AddConnectionString` API in the app host project to tell the projects/containers where to send the telemetry data. The Azure Monitor distro expects the environment variable to be `APPLICATIONINSIGHTS_CONNECTION_STRING`, so that needs to be explicitly set when defining the connection string.
 
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);
 
-var insights = builder.AddConnectionString("myInsightsResource", "APPLICATIONINSIGHTS_CONNECTION_STRING");
+var insights = builder.AddConnectionString(
+    "myInsightsResource",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING");
 
 var apiService = builder.AddProject<Projects.ApiService>("apiservice")
     .WithReference(insights);
@@ -96,6 +98,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var insights = builder.ExecutionContext.IsPublishMode
     ? builder.AddAzureApplicationInsights("myInsightsResource")
     : builder.AddConnectionString("myInsightsResource", "APPLICATIONINSIGHTS_CONNECTION_STRING");
+
 var apiService = builder.AddProject<Projects.ApiService>("apiservice")
     .WithReference(insights);
 

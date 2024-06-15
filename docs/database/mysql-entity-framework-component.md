@@ -1,7 +1,7 @@
 ---
 title: MySQL Entity Framework Component
 description: MySQL Entity Framework Component
-ms.date: 02/27/2024
+ms.date: 06/05/2024
 ---
 
 # .NET Aspire Pomelo MySQL Entity Framework Component
@@ -15,7 +15,7 @@ You need a MySQL database and connection string for accessing the database. To g
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.Pomelo.EntityFrameworkCore.MySql --prerelease
+dotnet add package Aspire.Pomelo.EntityFrameworkCore.MySql
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -31,7 +31,7 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireEFMySqlExtensions.AddMySqlDbContext%2A> extension to register a <xref:System.Data.Entity.DbContext?displayProperty=fullName> for use via the dependency injection container.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireEFMySqlExtensions.AddMySqlDbContext%2A> extension to register a <xref:System.Data.Entity.DbContext?displayProperty=fullName> for use via the dependency injection container.
 
 ```csharp
 builder.AddMySqlDbContext<MyDbContext>("mysqldb");
@@ -40,7 +40,7 @@ builder.AddMySqlDbContext<MyDbContext>("mysqldb");
 You can then retrieve the <xref:Microsoft.EntityFrameworkCore.DbContext> instance using dependency injection. For example, to retrieve the client from a service:
 
 ```csharp
-public class ExampleService(DbContext context)
+public class ExampleService(MyDbContext context)
 {
     // Use context...
 }
@@ -58,20 +58,16 @@ builder.EnrichMySqlDbContext<MyDbContext>();
 
 ## App host usage
 
-In your app host project, register an MySQL container and consume the connection using the following methods:
+[!INCLUDE [mysql-app-host](includes/mysql-app-host.md)]
 
 ```csharp
-var mysqldb = builder.AddMySql("mysql")
-                      .AddDatabase("mysqldb1");
+var builder = DistributedApplication.CreateBuilder(args);
+
+var mysql = builder.AddMySql("mysql");
+var mysqldb = mysql.AddDatabase("mysqldb");
 
 var myService = builder.AddProject<Projects.MyService>()
                        .WithReference(mysqldb);
-```
-
-The <xref:Aspire.Hosting.ResourceBuilderExtensions.WithReference%2A> method configures a connection in the `MyService` project named `mysqldb`. In the _Program.cs_ file of `MyService`, the database connection can be consumed using:
-
-```csharp
-builder.AddMySqlDbContext<MyDbContext>("mysqldb");
 ```
 
 ## Configuration
@@ -91,7 +87,7 @@ And then the connection string will be retrieved from the `ConnectionStrings` co
 ```json
 {
   "ConnectionStrings": {
-    "myConnection": "Server=myserver;Database=mysqldb1"
+    "myConnection": "Server=myserver;Database=mysqldb"
   }
 }
 ```
@@ -104,7 +100,7 @@ See the [MySqlConnector documentation](https://mysqlconnector.net/connection-opt
 
 The .NET Aspire Pomelo MySQL Entity Framework Core component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the `PomeloEntityFrameworkCoreMySqlSettings` from configuration by using the `Aspire:Pomelo:EntityFrameworkCore:MySql` key.
 
-The following example shows an _appsettings.json_ that configures some of the available options:
+The following example shows an _:::no-loc text="appsettings.json":::_ that configures some of the available options:
 
 ```json
 {
@@ -112,8 +108,8 @@ The following example shows an _appsettings.json_ that configures some of the av
     "Pomelo": {
       "EntityFrameworkCore": {
         "MySql": {
-          "HealthChecks": false,
-          "Tracing": false
+          "DisableHealthChecks": true,
+          "DisableTracing": true
         }
       }
     }
@@ -128,19 +124,19 @@ You can also pass the `Action<PomeloEntityFrameworkCoreMySqlSettings> configureS
 ```csharp
 builder.AddMySqlDbContext<MyDbContext>(
     "mysqldb1",
-    static settings => settings.HealthChecks = false);
+    static settings => settings.DisableHealthChecks  = true);
 ```
 
 or
 
 ```csharp
 builder.EnrichMySqlDbContext<MyDbContext>(
-    static settings => settings.HealthChecks = false);
+    static settings => settings.DisableHealthChecks  = true);
 ```
 
 [!INCLUDE [component-health-checks](../includes/component-health-checks.md)]
 
-The The .NET Aspire Pomelo MySQL Entity Framework Core component registers a basic health check that checks the database connection given a `TContext`. The health check is enabled by default and can be disabled using the `HealthChecks` property in the configuration.
+The The .NET Aspire Pomelo MySQL Entity Framework Core component registers a basic health check that checks the database connection given a `TContext`. The health check is enabled by default and can be disabled using the `DisableHealthChecks` property in the configuration.
 
 [!INCLUDE [component-observability-and-telemetry](../includes/component-observability-and-telemetry.md)]
 

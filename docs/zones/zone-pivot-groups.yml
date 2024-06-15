@@ -7,6 +7,8 @@ groups:
   pivots:
     - id: azure-azd
       title: Azure Developer CLI
+    - id: azure-vs
+      title: Visual Studio
     - id: azure-cli
       title: Azure CLI
     - id: azure-bicep
@@ -31,3 +33,14 @@ groups:
       title: GitHub Actions
     - id: azure-pipelines
       title: Azure Pipelines
+- id: dev-environment
+  title: Development environment
+  prompt: Choose a development environment
+  pivots:
+    - id: visual-studio
+      title: Visual Studio
+    - id: vscode
+      title: Visual Studio Code
+    - id: dotnet-cli
+      title: .NET CLI
+

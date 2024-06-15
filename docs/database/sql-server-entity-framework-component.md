@@ -2,7 +2,7 @@
 title: .NET Aspire SqlServer Entity Framework Core component
 description: This article describes the .NET Aspire SQL Server Entity Framework Core component.
 ms.topic: how-to
-ms.date: 01/22/2024
+ms.date: 06/05/2024
 ---
 
 # .NET Aspire SqlServer Entity Framework Core component
@@ -25,7 +25,7 @@ To get started with the .NET Aspire SQL Server Entity Framework Core component, 
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.Microsoft.EntityFrameworkCore.SqlServer --prerelease
+dotnet add package Aspire.Microsoft.EntityFrameworkCore.SqlServer
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -41,10 +41,10 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireSqlServerEFCoreSqlClientExtensions.AddSqlServerDbContext%2A> extension to register a `DbContext` for use via the dependency injection container.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireSqlServerEFCoreSqlClientExtensions.AddSqlServerDbContext%2A> extension to register a `DbContext` for use via the dependency injection container.
 
 ```csharp
-builder.AddSqlServerDbContext<YourDbContext>("sql");
+builder.AddSqlServerDbContext<YourDbContext>("sqldb");
 ```
 
 To retrieve `YourDbContext` object from a service:
@@ -58,20 +58,16 @@ public class ExampleService(YourDbContext client)
 
 ## App host usage
 
-In your app host project, register a SqlServer database and consume the connection using the following methods, such as <xref:Aspire.Hosting.SqlServerBuilderExtensions.AddSqlServer%2A>:
+[!INCLUDE [sql-app-host](includes/sql-app-host.md)]
 
 ```csharp
-var sql = builder.AddSqlServer("sql")
-                 .AddDatabase("sqldata");
+var builder = DistributedApplication.CreateBuilder(args);
+
+var sql = builder.AddSqlServer("sql");
+var sqldb = sql.AddDatabase("sqldb");
 
 var myService = builder.AddProject<Projects.MyService>()
-                       .WithReference(sql);
-```
-
-The <xref:Aspire.Hosting.ResourceBuilderExtensions.WithReference%2A> method configures a connection in the `MyService` project named `sqldata`. In the _Program.cs_ file of `MyService`, the sql connection can be consumed using:
-
-```csharp
-builder.AddSqlServerDbContext<MyDbContext>("sqldata");
+                       .WithReference(sqldb);
 ```
 
 ## Configuration
@@ -80,9 +76,9 @@ The .NET Aspire SQL Server Entity Framework Core component provides multiple con
 
 ### Use configuration providers
 
-The .NET Aspire SQL Server Entity Framework Core component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the <xref:Aspire.Microsoft.EntityFrameworkCore.SqlServer.MicrosoftEntityFrameworkCoreSqlServerSettings> from configuration files such as _appsettings.json_ by using the `Aspire:Microsoft:EntityFrameworkCore:SqlServer` key. If you have set up your configurations in the `Aspire:Microsoft:EntityFrameworkCore:SqlServer` section you can just call the method without passing any parameter.
+The .NET Aspire SQL Server Entity Framework Core component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the <xref:Aspire.Microsoft.EntityFrameworkCore.SqlServer.MicrosoftEntityFrameworkCoreSqlServerSettings> from configuration files such as _:::no-loc text="appsettings.json":::_ by using the `Aspire:Microsoft:EntityFrameworkCore:SqlServer` key. If you have set up your configurations in the `Aspire:Microsoft:EntityFrameworkCore:SqlServer` section you can just call the method without passing any parameter.
 
-The following is an example of an _appsettings.json_ file that configures some of the available options:
+The following is an example of an _:::no-loc text="appsettings.json":::_ file that configures some of the available options:
 
 ```json
 {
@@ -92,9 +88,9 @@ The following is an example of an _appsettings.json_ file that configures some o
         "SqlServer": {
           "ConnectionString": "YOUR_CONNECTIONSTRING",
           "DbContextPooling": true,
-          "HealthChecks": false,
-          "Tracing": false,
-          "Metrics": true
+          "DisableHealthChecks": true,
+          "DisableTracing": true,
+          "DisableMetrics": false
         }
       }
     }
@@ -104,13 +100,13 @@ The following is an example of an _appsettings.json_ file that configures some o
 
 ### Use inline configurations
 
-You can also pass the `Action<MicrosoftEntityFrameworkCoreSqlServerSettings>` delegate to set up some or all the options inline, for example to turn off the `Metrics`:
+You can also pass the `Action<MicrosoftEntityFrameworkCoreSqlServerSettings>` delegate to set up some or all the options inline, for example to turn off the metrics:
 
 ```csharp
 builder.AddSqlServerDbContext<YourDbContext>(
     "sql",
     static settings =>
-        settings.ConnectionString = "YOUR_CONNECTIONSTRING");
+        settings.DisableMetrics = true);
 ```
 
 ### Configure multiple DbContext connections
@@ -125,12 +121,12 @@ If you want to register more than one `DbContext` with different configuration, 
           "SqlServer": {
             "ConnectionString": "YOUR_CONNECTIONSTRING",
             "DbContextPooling": true,
-            "HealthChecks": false,
-            "Tracing": false,
-            "Metrics": true,
+            "DisableHealthChecks": true,
+            "DisableTracing": true,
+            "DisableMetrics": false,
           "AnotherDbContext": {
             "ConnectionString": "AnotherDbContext_CONNECTIONSTRING",
-            "Tracing": true
+            "DisableTracing": false
           }
         }
       }
@@ -149,15 +145,15 @@ builder.AddSqlServerDbContext<AnotherDbContext>("another-sql");
 
 Here are the configurable options with corresponding default values:
 
-| Name | Description |
-|--|--|
-| `ConnectionString` | The connection string of the SQL Server database to connect to. |
-| `DbContextPooling` | A boolean value that indicates whether the db context will be pooled or explicitly created every time it's requested |
-| `MaxRetryCount` | The maximum number of retry attempts. Default value is 6, set it to 0 to disable the retry mechanism. |
-| `HealthChecks` | A boolean value that indicates whether the database health check is enabled or not. |
-| `Tracing` | A boolean value that indicates whether the OpenTelemetry tracing is enabled or not. |
-| `Metrics` | A boolean value that indicates whether the OpenTelemetry metrics are enabled or not. |
-| `Timeout` | The time in seconds to wait for the command to execute. |
+| Name                  | Description                                                                                                          |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------|
+| `ConnectionString`    | The connection string of the SQL Server database to connect to.                                                      |
+| `DbContextPooling`    | A boolean value that indicates whether the db context will be pooled or explicitly created every time it's requested |
+| `MaxRetryCount`       | The maximum number of retry attempts. Default value is 6, set it to 0 to disable the retry mechanism.                |
+| `DisableHealthChecks` | A boolean value that indicates whether the database health check is disabled or not.                                 |
+| `DisableTracing`      | A boolean value that indicates whether the OpenTelemetry tracing is disabled or not.                                 |
+| `DisableMetrics`      | A boolean value that indicates whether the OpenTelemetry metrics are disabled or not.                                |
+| `Timeout`             | The time in seconds to wait for the command to execute.                                                              |
 
 [!INCLUDE [component-health-checks](../includes/component-health-checks.md)]
 

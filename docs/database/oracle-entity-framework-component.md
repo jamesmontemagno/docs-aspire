@@ -1,7 +1,7 @@
 ---
 title: Oracle Entity Framework Component
 description: Oracle Entity Framework Component
-ms.date: 02/26/2024
+ms.date: 06/03/2024
 ---
 
 # .NET Aspire Oracle Entity Framework Component
@@ -15,7 +15,7 @@ You need an Oracle database and connection string for accessing the database. To
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.Oracle.EntityFrameworkCore --prerelease
+dotnet add package Aspire.Oracle.EntityFrameworkCore
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -31,16 +31,16 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireOracleEFCoreExtensions.AddOracleDatabaseDbContext%2A> extension to register a <xref:System.Data.Entity.DbContext?displayProperty=fullName> for use via the dependency injection container.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireOracleEFCoreExtensions.AddOracleDatabaseDbContext%2A> extension to register a <xref:System.Data.Entity.DbContext?displayProperty=fullName> for use via the dependency injection container.
 
 ```csharp
-builder.AddOracleDatabaseDbContext<DbContext>("oracle");
+builder.AddOracleDatabaseDbContext<MyDbContext>("oracledb");
 ```
 
 You can then retrieve the <xref:Microsoft.EntityFrameworkCore.DbContext> instance using dependency injection. For example, to retrieve the client from a service:
 
 ```csharp
-public class ExampleService(DbContext context)
+public class ExampleService(MyDbContext context)
 {
     // Use context...
 }
@@ -49,31 +49,58 @@ public class ExampleService(DbContext context)
 You might also need to configure specific options of Oracle database, or register a `DbContext` in other ways. In this case call the `EnrichOracleDatabaseDbContext` extension method, for example:
 
 ```csharp
-var connectionString = builder.Configuration.GetConnectionString("catalogdb");
+var connectionString = builder.Configuration.GetConnectionString("oracledb");
 
-builder.Services.AddDbContextPool<CatalogDbContext>(
+builder.Services.AddDbContextPool<MyDbContext>(
     dbContextOptionsBuilder => dbContextOptionsBuilder.UseOracle(connectionString));
 
-builder.EnrichOracleDatabaseDbContext<CatalogDbContext>();
+builder.EnrichOracleDatabaseDbContext<MyDbContext>();
 ```
 
 ## App host usage
 
+To model the Oracle server resource in the app host, install the [Aspire.Hosting.Oracle](https://www.nuget.org/packages/Aspire.Hosting.Oracle) NuGet package.
+
+### [.NET CLI](#tab/dotnet-cli)
+
+```dotnetcli
+dotnet add package Aspire.Hosting.Oracle
+```
+
+### [PackageReference](#tab/package-reference)
+
+```xml
+<PackageReference Include="Aspire.Hosting.Oracle"
+                  Version="[SelectVersion]" />
+```
+
+---
+
 In your app host project, register an Oracle container and consume the connection using the following methods:
 
 ```csharp
-var freepdb1 = builder.AddOracleDatabase("oracle")
-                      .AddDatabase("freepdb1");
+var builder = DistributedApplication.CreateBuilder(args);
+
+var oracle = builder.AddOracle("oracle");
+var oracledb = oracle.AddDatabase("oracledb");
 
 var myService = builder.AddProject<Projects.MyService>()
-                       .WithReference(freepdb1);
+                       .WithReference(oracledb);
 ```
 
-The <xref:Aspire.Hosting.ResourceBuilderExtensions.WithReference%2A> method configures a connection in the `MyService` project named `freepdb1`. In the _Program.cs_ file of `MyService`, the database connection can be consumed using:
+When you want to explicitly provide a password, you can provide it as a parameter. Consider the following alternative example:
 
 ```csharp
-builder.AddOracleDatabaseDbContext<MyDbContext>("freepdb1");
+var password = builder.AddParameter("password", secret: true);
+
+var oracle = builder.AddOracle("oracle", password);
+var oracledb = oracle.AddDatabase("oracledb");
+
+var myService = builder.AddProject<Projects.MyService>()
+                       .WithReference(oracledb);
 ```
+
+For more information, see [External parameters](../fundamentals/external-parameters.md).
 
 ## Configuration
 
@@ -103,19 +130,19 @@ See the [ODP.NET documentation](https://www.oracle.com/database/technologies/app
 
 ### Use configuration providers
 
-The .NET Aspire Oracle Entity Framework Core component supports [Microsoft.Extensions.Configuration](https://learn.microsoft.com/dotnet/api/microsoft.extensions.configuration). It loads the `OracleEntityFrameworkCoreSettings` from configuration by using the `Aspire:Oracle:EntityFrameworkCore` key.
+The .NET Aspire Oracle Entity Framework Core component supports [Microsoft.Extensions.Configuration](/dotnet/api/microsoft.extensions.configuration). It loads the `OracleEntityFrameworkCoreSettings` from configuration by using the `Aspire:Oracle:EntityFrameworkCore` key.
 
-The following example shows an _appsettings.json_ that configures some of the available options:
+The following example shows an _:::no-loc text="appsettings.json":::_ that configures some of the available options:
 
 ```json
 {
   "Aspire": {
     "Oracle": {
       "EntityFrameworkCore": {
-        "HealthChecks": false,
-        "Tracing": false,
-        "Metrics": true,
-        "Retry": true,
+        "DisableHealthChecks": true,
+        "DisableTracing": true,
+        "DisableMetrics": false,
+        "DisableRetry": false,
         "Timeout": 30
       }
     }
@@ -133,19 +160,19 @@ You can also pass the `Action<OracleEntityFrameworkCoreSettings> configureSettin
 ```csharp
 builder.AddOracleDatabaseDbContext<MyDbContext>(
     "oracle",
-    static settings => settings.HealthChecks = false);
+    static settings => settings.DisableHealthChecks  = true);
 ```
 
 or
 
 ```csharp
 builder.EnrichOracleDatabaseDbContext<MyDbContext>(
-    static settings => settings.HealthChecks = false);
+    static settings => settings.DisableHealthChecks  = true);
 ```
 
 [!INCLUDE [component-health-checks](../includes/component-health-checks.md)]
 
-The The .NET Aspire Oracle Entity Framework Core component registers a basic health check that checks the database connection given a `TContext`. The health check is enabled by default and can be disabled using the `HealthChecks` property in the configuration.
+The The .NET Aspire Oracle Entity Framework Core component registers a basic health check that checks the database connection given a `TContext`. The health check is enabled by default and can be disabled using the `DisableHealthChecks` property in the configuration.
 
 [!INCLUDE [component-observability-and-telemetry](../includes/component-observability-and-telemetry.md)]
 

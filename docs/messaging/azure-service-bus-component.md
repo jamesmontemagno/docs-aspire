@@ -2,7 +2,7 @@
 title: .NET Aspire Azure Service Bus component
 description: This article describes the .NET Aspire Azure Service Bus component features and capabilities
 ms.topic: how-to
-ms.date: 01/22/2024
+ms.date: 06/05/2024
 ---
 
 # .NET Aspire Azure Service Bus component
@@ -24,7 +24,7 @@ To get started with the .NET Aspire Azure Service Bus component, install the [As
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.Azure.Messaging.ServiceBus --prerelease
+dotnet add package Aspire.Azure.Messaging.ServiceBus
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -40,10 +40,10 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireServiceBusExtensions.AddAzureServiceBus%2A> extension to register a `ServiceBusClient` for use via the dependency injection container.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireServiceBusExtensions.AddAzureServiceBusClient%2A> extension to register a `ServiceBusClient` for use via the dependency injection container.
 
 ```csharp
-builder.AddAzureServiceBus("messaging");
+builder.AddAzureServiceBusClient("messaging");
 ```
 
 To retrieve the configured <xref:Azure.Messaging.ServiceBus.ServiceBusClient> instance using dependency injection, require it as a constructor parameter. For example, to retrieve the client from an example service:
@@ -57,17 +57,32 @@ public class ExampleService(ServiceBusClient client)
 
 ## App host usage
 
-[!INCLUDE [azure-component-nuget](../includes/azure-component-nuget.md)]
+To add Azure Service Bus hosting support to your <xref:Aspire.Hosting.IDistributedApplicationBuilder>, install the [Aspire.Hosting.Azure.ServiceBus](https://www.nuget.org/packages/Aspire.Hosting.Azure.ServiceBus) NuGet package.
+
+### [.NET CLI](#tab/dotnet-cli)
+
+```dotnetcli
+dotnet add package Aspire.Hosting.Azure.ServiceBus
+```
+
+### [PackageReference](#tab/package-reference)
+
+```xml
+<PackageReference Include="Aspire.Hosting.Azure.ServiceBus"
+                  Version="[SelectVersion]" />
+```
+
+---
 
 In your app host project, register the Service Bus component and consume the service using the following methods:
 
 ```csharp
-// Service registration
+var builder = DistributedApplication.CreateBuilder(args);
+
 var serviceBus = builder.ExecutionContext.IsPublishMode
     ? builder.AddAzureServiceBus("messaging")
     : builder.AddConnectionString("messaging");
 
-// Service consumption
 builder.AddProject<Projects.ExampleProject>()
        .WithReference(serviceBus)
 ```
@@ -78,7 +93,7 @@ The .NET Aspire Service Bus component provides multiple options to configure the
 
 ### Use configuration providers
 
-The Service Bus component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the `AzureMessagingServiceBusSettings` from _appsettings.json_ or other configuration files using `Aspire:Azure:Messaging:ServiceBus` key.
+The Service Bus component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the `AzureMessagingServiceBusSettings` from _:::no-loc text="appsettings.json":::_ or other configuration files using `Aspire:Azure:Messaging:ServiceBus` key.
 
 ```json
 {
@@ -86,8 +101,8 @@ The Service Bus component supports <xref:Microsoft.Extensions.Configuration?disp
     "Azure": {
       "Messaging": {
         "ServiceBus": {
-          "HealthChecks": false,
-          "Tracing": true,
+          "DisableHealthChecks": true,
+          "DisableTracing": false,
           "ClientOptions": {
             "Identifier": "CLIENT_ID"
           }
@@ -98,16 +113,16 @@ The Service Bus component supports <xref:Microsoft.Extensions.Configuration?disp
 }
 ```
 
-If you have set up your configurations in the `Aspire:Azure:Messaging:ServiceBus` section of your _appsettings.json_ file you can just call the method `AddAzureServiceBus` without passing any parameters.
+If you have set up your configurations in the `Aspire:Azure:Messaging:ServiceBus` section of your _:::no-loc text="appsettings.json":::_ file you can just call the method `AddAzureServiceBus` without passing any parameters.
 
 ### Use inline delegates
 
-You can also pass the `Action<AzureMessagingServiceBusSettings>` delegate to set up some or all the options inline, for example to set the `Namespace`:
+You can also pass the `Action<AzureMessagingServiceBusSettings>` delegate to set up some or all the options inline, for example to set the `FullyQualifiedNamespace`:
 
 ```csharp
 builder.AddAzureServiceBus(
     "messaging",
-    static settings => settings.Namespace = "YOUR_SERVICE_BUS_NAMESPACE");
+    static settings => settings.FullyQualifiedNamespace = "YOUR_SERVICE_BUS_NAMESPACE");
 ```
 
 You can also set up the [ServiceBusClientOptions](/dotnet/api/azure.messaging.servicebus.servicebusclientoptions) using `Action<IAzureClientBuilder<ServiceBusClient, ServiceBusClientOptions>>` delegate, the second parameter of the `AddAzureServiceBus` method. For example to set the `ServiceBusClient` ID to identify the client:
@@ -136,7 +151,7 @@ The corresponding configuration JSON is defined as follows:
     "Azure": {
       "Messaging": {
         "INSTANCE_NAME": {
-          "Namespace": "YOUR_SERVICE_BUS_NAMESPACE",
+          "FullyQualifiedNamespace": "YOUR_SERVICE_BUS_NAMESPACE",
           "ClientOptions": {
             "Identifier": "CLIENT_ID"
           }
@@ -151,18 +166,16 @@ The corresponding configuration JSON is defined as follows:
 
 The following configurable options are exposed through the <xref:Aspire.Azure.Messaging.ServiceBus.AzureMessagingServiceBusSettings> class:
 
-| Name               | Description                                                         |
-|--------------------|---------------------------------------------------------------------|
+| Name | Description |
+|--|--|
 | `ConnectionString` | The connection string used to connect to the Service Bus namespace. |
-| `Credential`       | The credential used to authenticate to the Service Bus namespace.   |
-| `Namespace`        | The fully qualified Service Bus namespace.                          |
+| `Credential` | The credential used to authenticate to the Service Bus namespace. |
+| `FullyQualifiedNamespace` | The fully qualified Service Bus namespace. |
+| `DisableTracing` | Disables tracing for the Service Bus client. |
+| **<sup>†</sup>**`HealthCheckQueueName` | The name of the queue used for health checks. |
+| **<sup>†</sup>**`HealthCheckTopicName` | The name of the topic used for health checks. |
 
-[!INCLUDE [component-health-checks](../includes/component-health-checks.md)]
-
-The .NET Aspire Azure Service Bus component handles the following:
-
-- Adds the `AzureServiceBusHealthCheck` health check, which attempts to connect to and query the specified service bus
-- Integrates with the `/health` HTTP endpoint, which specifies all registered health checks must pass for app to be considered ready to accept traffic
+_**<sup>†</sup>** At least one of the name options are mandatory when enabling health checks._
 
 [!INCLUDE [component-observability-and-telemetry](../includes/component-observability-and-telemetry.md)]
 
@@ -172,12 +185,58 @@ The .NET Aspire Azure Service Bus component uses the following log categories:
 
 - `Azure.Core`
 - `Azure.Identity`
+- `Azure-Messaging-ServiceBus`
 
 ### Tracing
 
-The .NET Aspire Azure Service Bus component will emit the following tracing activities using OpenTelemetry:
+> [!NOTE]
+> Service Bus `ActivitySource` support in the Azure SDK for .NET is experimental, and the shape of activities may change in the future without notice.
 
-- "Azure.Data.Tables.TableServiceClient"
+You can enable tracing in several ways:
+
+- Setting the `Azure.Experimental.EnableActivitySource` [runtime configuration setting](/dotnet/core/runtime-config/) to `true`. Which can be done with either:  
+  - Call `AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);`.
+  - Add the `RuntimeHostConfigurationOption` setting to your project file:
+
+      ```xml
+      <ItemGroup>
+          <RuntimeHostConfigurationOption
+               Include="Azure.Experimental.EnableActivitySource"
+               Value="true" />
+      </ItemGroup>
+      ```
+
+- Set the `AZURE_EXPERIMENTAL_ENABLE_ACTIVITY_SOURCE` environment variable to "true".
+  - Can be achieved by chaining a call to `WithEnvironment("AZURE_EXPERIMENTAL_ENABLE_ACTIVITY_SOURCE", "true")`
+
+When enabled, the .NET Aspire Azure Service Bus component will emit the following tracing activities using OpenTelemetry:
+
+- `Message`
+- `ServiceBusSender.Send`
+- `ServiceBusSender.Schedule`
+- `ServiceBusSender.Cancel`
+- `ServiceBusReceiver.Receive`
+- `ServiceBusReceiver.ReceiveDeferred`
+- `ServiceBusReceiver.Peek`
+- `ServiceBusReceiver.Abandon`
+- `ServiceBusReceiver.Complete`
+- `ServiceBusReceiver.DeadLetter`
+- `ServiceBusReceiver.Defer`
+- `ServiceBusReceiver.RenewMessageLock`
+- `ServiceBusSessionReceiver.RenewSessionLock`
+- `ServiceBusSessionReceiver.GetSessionState`
+- `ServiceBusSessionReceiver.SetSessionState`
+- `ServiceBusProcessor.ProcessMessage`
+- `ServiceBusSessionProcessor.ProcessSessionMessage`
+- `ServiceBusRuleManager.CreateRule`
+- `ServiceBusRuleManager.DeleteRule`
+- `ServiceBusRuleManager.GetRules`
+
+For more information, see:
+
+- [Azure SDK for .NET: Distributed tracing and the Service Bus client](https://github.com/Azure/azure-sdk-for-net/blob/Azure.Messaging.ServiceBus_7.17.5/sdk/servicebus/Azure.Messaging.ServiceBus/TROUBLESHOOTING.md#distributed-tracing).
+- [Azure SDK for .NET: OpenTelemetry configuration](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/core/Azure.Core/samples/Diagnostics.md#opentelemetry-configuration).
+- [Azure SDK for .NET: Enabling experimental tracing features](https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/core/Azure.Core/samples/Diagnostics.md#enabling-experimental-tracing-features).
 
 ### Metrics
 

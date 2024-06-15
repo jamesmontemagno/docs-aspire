@@ -2,7 +2,7 @@
 title: .NET Aspire Azure Key Vault component
 description: Lean about the .NET Aspire Azure Key Vault component.
 ms.topic: how-to
-ms.date: 01/22/2024
+ms.date: 06/05/2024
 ---
 
 # .NET Aspire Azure Key Vault component
@@ -16,7 +16,7 @@ To get started with the .NET Aspire Azure Key Vault component, install the [Aspi
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.Azure.Security.KeyVault --prerelease
+dotnet add package Aspire.Azure.Security.KeyVault
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -32,10 +32,30 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireKeyVaultExtensions.AddAzureKeyVaultSecrets%2A> extension to register a `SecretClient` for use via the dependency injection container.
+### Add secrets to configuration
+
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireKeyVaultExtensions.AddAzureKeyVaultSecrets%2A> extension to add the secrets in the Azure Key Vault to the application's Configuration. The method takes a connection name parameter.
 
 ```csharp
-builder.AddAzureKeyVaultSecrets("secrets");
+builder.Configuration.AddAzureKeyVaultSecrets("secrets");
+```
+
+You can then retrieve a secret through normal <xref:Microsoft.Extensions.Configuration.IConfiguration> APIs. For example, to retrieve a secret from a service:
+
+```csharp
+public class ExampleService(IConfiguration configuration)
+{
+    string secretValue = configuration["secretKey"];
+    // Use secretValue ...
+}
+```
+
+### Use SecretClient
+
+Alternatively, you can use a `SecretClient` to retrieve the secrets on demand. In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the <xref:Microsoft.Extensions.Hosting.AspireKeyVaultExtensions.AddAzureKeyVaultClient%2A> extension to register a `SecretClient` for use via the dependency injection container.
+
+```csharp
+builder.AddAzureKeyVaultClient("secrets");
 ```
 
 You can then retrieve the <xref:Azure.Security.KeyVault.Secrets.SecretClient> instance using dependency injection. For example, to retrieve the client from a service:
@@ -49,17 +69,32 @@ public class ExampleService(SecretClient client)
 
 ## App host usage
 
-[!INCLUDE [azure-component-nuget](../includes/azure-component-nuget.md)]
+To add Azure Key Vault hosting support to your <xref:Aspire.Hosting.IDistributedApplicationBuilder>, install the [Aspire.Hosting.Azure.KeyVault](https://www.nuget.org/packages/Aspire.Hosting.Azure.KeyVault) NuGet package.
+
+### [.NET CLI](#tab/dotnet-cli)
+
+```dotnetcli
+dotnet add package Aspire.Hosting.Azure.KeyVault
+```
+
+### [PackageReference](#tab/package-reference)
+
+```xml
+<PackageReference Include="Aspire.Hosting.Azure.KeyVault"
+                  Version="[SelectVersion]" />
+```
+
+---
 
 In your app host project, register the Azure Key Vault component and consume the service using the following methods:
 
 ```csharp
-// Service registration
+var builder = DistributedApplication.CreateBuilder(args);
+
 var secrets = builder.ExecutionContext.IsPublishMode
     ? builder.AddAzureKeyVault("secrets")
     : builder.AddConnectionString("secrets");
 
-// Service consumption
 builder.AddProject<Projects.ExampleProject>()
        .WithReference(secrets)
 ```
@@ -70,7 +105,7 @@ The .NET Aspire Azure Key Vault component provides multiple options to configure
 
 ### Use configuration providers
 
-The .NET Aspire Azure Key Vault component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the <xref:Aspire.Azure.Security.KeyVault.AzureSecurityKeyVaultSettings> from _appsettings.json_ or other configuration files using `Aspire:Azure:Security:KeyVault` key.
+The .NET Aspire Azure Key Vault component supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the <xref:Aspire.Azure.Security.KeyVault.AzureSecurityKeyVaultSettings> from _:::no-loc text="appsettings.json":::_ or other configuration files using `Aspire:Azure:Security:KeyVault` key.
 
 ```json
 {
@@ -79,8 +114,8 @@ The .NET Aspire Azure Key Vault component supports <xref:Microsoft.Extensions.Co
       "Security": {
         "KeyVault": {
           "VaultUri": "YOUR_VAULT_URI",
-          "HealthChecks": true,
-          "Tracing": false,
+          "DisableHealthChecks": false,
+          "DisableTracing": true,
           "ClientOptions": {
             "DisableChallengeResourceVerification": true
           }
@@ -91,16 +126,16 @@ The .NET Aspire Azure Key Vault component supports <xref:Microsoft.Extensions.Co
 }
 ```
 
-If you have set up your configurations in the `Aspire:Azure:Security:KeyVault` section of your _appsettings.json_ file you can just call the method `AddAzureKeyVaultSecrets` without passing any parameters.
+If you have set up your configurations in the `Aspire:Azure:Security:KeyVault` section of your _:::no-loc text="appsettings.json":::_ file you can just call the method `AddAzureKeyVaultSecrets` without passing any parameters.
 
 ### Use inline delegates
 
-You can also pass the `Action<AzureSecurityKeyVaultSettings>` delegate to set up some or all the options inline, for example to set the `Namespace`:
+You can also pass the `Action<AzureSecurityKeyVaultSettings>` delegate to set up some or all the options inline, for example to set the `VaultUri`:
 
 ```csharp
 builder.AddAzureKeyVaultSecrets(
     "secrets",
-    static settings => settings.ServiceUri = new Uri("YOUR_SERVICEURI"));
+    static settings => settings.VaultUri = new Uri("YOUR_VAULTURI"));
 ```
 
 You can also set up the <xref:Azure.Security.KeyVault.Secrets.SecretClientOptions> using `Action<IAzureClientBuilder<SecretClient, SecretClientOptions>>` delegate, the second parameter of the `AddAzureKeyVaultSecrets` method. For example to set the <xref:Azure.Security.KeyVault.Keys.KeyClientOptions.DisableChallengeResourceVerification?displayProperty=nameWithType> ID to identify the client:
@@ -131,8 +166,8 @@ The corresponding configuration JSON is defined as follows:
         "KeyVault": {
           "INSTANCE_NAME": {
             "VaultUri": "YOUR_VAULT_URI",
-            "HealthChecks": true,
-            "Tracing": false,
+            "DisableHealthChecks": false,
+            "DisableTracing": true,
             "ClientOptions": {
               "DisableChallengeResourceVerification": true
             }
@@ -148,12 +183,12 @@ The corresponding configuration JSON is defined as follows:
 
 The following configurable options are exposed through the <xref:Aspire.Azure.Security.KeyVault.AzureSecurityKeyVaultSettings> class:
 
-| Name           | Description                                                                                 |
-|----------------|---------------------------------------------------------------------------------------------|
-| `VaultUri`     | A URI to the vault on which the client operates. Appears as "DNS Name" in the Azure portal. |
-| `Credential`   | The credential used to authenticate to the Azure Key Vault.                                 |
-| `HealthChecks` | A boolean value that indicates whether the Key Vault health check is enabled or not.        |
-| `Tracing`      | A boolean value that indicates whether the OpenTelemetry tracing is enabled or not.         |
+| Name                  | Description                                                                                  |
+|-----------------------|----------------------------------------------------------------------------------------------|
+| `VaultUri`            | A URI to the vault on which the client operates. Appears as "DNS Name" in the Azure portal.  |
+| `Credential`          | The credential used to authenticate to the Azure Key Vault.                                  |
+| `DisableHealthChecks` | A boolean value that indicates whether the Key Vault health check is disabled or not.        |
+| `DisableTracing`      | A boolean value that indicates whether the OpenTelemetry tracing is disabled or not.         |
 
 [!INCLUDE [component-health-checks](../includes/component-health-checks.md)]
 

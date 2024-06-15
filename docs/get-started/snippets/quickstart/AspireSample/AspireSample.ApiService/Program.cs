@@ -18,7 +18,12 @@ var summaries = new[]
 
 app.MapGet("/weatherforecast", () =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
+    if (Random.Shared.NextDouble() > .5)
+    {
+        //throw new Exception("This is an example error for demonstration purposes.");
+    }
+
+    var forecast = Enumerable.Range(1, 5).Select(index =>
         new WeatherForecast
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),

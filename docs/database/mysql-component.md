@@ -2,7 +2,7 @@
 title: .NET Aspire MySQL database component
 description: This article describes the .NET Aspire MySQL database component.
 ms.topic: how-to
-ms.date: 01/22/2024
+ms.date: 06/05/2024
 ---
 
 # .NET Aspire MySQL database component
@@ -24,7 +24,7 @@ To get started with the .NET Aspire MySQL database component, install the [Aspir
 ### [.NET CLI](#tab/dotnet-cli)
 
 ```dotnetcli
-dotnet add package Aspire.MySqlConnector --prerelease
+dotnet add package Aspire.MySqlConnector
 ```
 
 ### [PackageReference](#tab/package-reference)
@@ -40,10 +40,10 @@ For more information, see [dotnet add package](/dotnet/core/tools/dotnet-add-pac
 
 ## Example usage
 
-In the _Program.cs_ file of your component-consuming project, call the `AddMySqlDataSource` extension to register a `MySqlDataSource` for use via the dependency injection container.
+In the _:::no-loc text="Program.cs":::_ file of your component-consuming project, call the `AddMySqlDataSource` extension to register a `MySqlDataSource` for use via the dependency injection container.
 
 ```csharp
-builder.AddMySqlDataSource("mysqldatasource");
+builder.AddMySqlDataSource("mysqldb");
 ```
 
 To retrieve your `MySqlDataSource` object, consider the following example service:
@@ -59,21 +59,31 @@ After adding a `MySqlDataSource`, you can require the `MySqlDataSource` instance
 
 ## App host usage
 
-In your app host project, register a MySql database and consume the connection using the following methods:
+[!INCLUDE [mysql-app-host](includes/mysql-app-host.md)]
 
 ```csharp
-var mysqldb = builder.AddMySql("mysql")
-                     .AddDatabase("mysqldb");
+var builder = DistributedApplication.CreateBuilder(args);
+
+var mysql = builder.AddMySql("mysql");
+var mysqldb = mysql.AddDatabase("mysqldb");
 
 var myService = builder.AddProject<Projects.MyService>()
                        .WithReference(mysqldb);
 ```
 
-The `WithReference` method configures a connection in the `MyService` project named `mysqldb`. In the _Program.cs_ file of `MyService`, the sql connection can be consumed using:
+When you want to explicitly provide a root MySQL password, you can provide it as a parameter. Consider the following alternative example:
 
 ```csharp
-builder.AddMySqlDataSource("mysqldb");
+var password = builder.AddParameter("password", secret: true);
+
+var mysql = builder.AddMySql("mysql", password);
+var mysqldb = mysql.AddDatabase("mysqldb");
+
+var myService = builder.AddProject<Projects.MyService>()
+                       .WithReference(mysqldb);
 ```
+
+For more information, see [External parameters](../fundamentals/external-parameters.md).
 
 ## Configuration
 
@@ -92,7 +102,7 @@ Then the connection string will be retrieved from the `ConnectionStrings` config
 ```json
 {
   "ConnectionStrings": {
-    "MySqConnection": "Server=mysql;Database=test"
+    "MySqConnection": "Server=mysql;Database=mysqldb"
   }
 }
 ```
@@ -101,16 +111,16 @@ For more information on how to format this connection string, see [MySqlConnecto
 
 ### Use configuration providers
 
-The .NET Aspire MySQL database supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the `MySqlConnectorSettings` from configuration files such as _appsettings.json_ by using the `Aspire:MySqlConnector` key. If you have set up your configurations in the `Aspire:MySqlConnector` section, you can just call the method without passing any parameter.
+The .NET Aspire MySQL database supports <xref:Microsoft.Extensions.Configuration?displayProperty=fullName>. It loads the `MySqlConnectorSettings` from configuration files such as _:::no-loc text="appsettings.json":::_ by using the `Aspire:MySqlConnector` key. If you have set up your configurations in the `Aspire:MySqlConnector` section, you can just call the method without passing any parameter.
 
-The following example shows an _appsettings.json_ file that configures some of the available options:
+The following example shows an _:::no-loc text="appsettings.json":::_ file that configures some of the available options:
 
 ```json
 {
   "Aspire": {
     "MySqlConnector": {
-      "HealthChecks": false,
-      "Tracing": false
+      "DisableHealthChecks": true,
+      "DisableTracing": true
     }
   }
 }
@@ -122,19 +132,19 @@ You can also pass the `Action<MySqlConnectorSettings>` delegate to set up some o
 
 ```csharp
 builder.AddMySqlDataSource("mysql",
-    static settings => settings.HealthChecks = false);
+    static settings => settings.DisableHealthChecks  = true);
 ```
 
 ### Configuration options
 
 Here are the configurable options with corresponding default values:
 
-| Name               | Description                                                                          |
-|--------------------|--------------------------------------------------------------------------------------|
-| `ConnectionString` | The connection string of the MySQL database database to connect to.                  |
-| `HealthChecks`     | A boolean value that indicates whether the database health check is enabled or not.  |
-| `Tracing`          | A boolean value that indicates whether the OpenTelemetry tracing is enabled or not.  |
-| `Metrics`          | A boolean value that indicates whether the OpenTelemetry metrics are enabled or not. |
+| Name                  | Description                                                                           |
+|-----------------------|---------------------------------------------------------------------------------------|
+| `ConnectionString`    | The connection string of the MySQL database database to connect to.                   |
+| `DisableHealthChecks` | A boolean value that indicates whether the database health check is disabled or not.  |
+| `DisableTracing`      | A boolean value that indicates whether the OpenTelemetry tracing is disabled or not.  |
+| `DisableMetrics`      | A boolean value that indicates whether the OpenTelemetry metrics are disabled or not. |
 
 [!INCLUDE [component-health-checks](../includes/component-health-checks.md)]
 
